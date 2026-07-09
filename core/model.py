@@ -15,11 +15,12 @@ if not torch.cuda.is_available():
     torch.Tensor.cuda = lambda self, *args, **kwargs: self.to(device=device, *args, **kwargs)
 
 # Override torch.autocast
-original_autocast = torch.autocast
-torch.autococast_is_patched = True
-torch.autocast = lambda device_type, *args, **kwargs: (
-    original_autocast("cpu", *args, **kwargs) if device_type == "cuda" else original_autocast(device_type, *args, **kwargs)
-)
+if not torch.cuda.is_available():
+    original_autocast = torch.autocast
+    torch.autococast_is_patched = True
+    torch.autocast = lambda device_type, *args, **kwargs: (
+        original_autocast("cpu", *args, **kwargs) if device_type == "cuda" else original_autocast(device_type, *args, **kwargs)
+    )
 
 MODEL_NAME = "baidu/Unlimited-OCR"
 tokenizer = None
