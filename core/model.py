@@ -1,6 +1,6 @@
 import os
 import torch
-from transformers import AutoModel, AutoTokenizer
+from transformers import AutoModel, LlamaTokenizerFast
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CUDA/MPS Device Patching Shim
@@ -34,8 +34,8 @@ def load_model():
 
     print(f"Loading tokenizer ({MODEL_NAME})...")
     try:
-        # Try loading offline first
-        tokenizer = AutoTokenizer.from_pretrained(
+        # Try loading offline first using LlamaTokenizerFast directly to bypass AutoTokenizer's slow LlamaTokenizer instantiation checks
+        tokenizer = LlamaTokenizerFast.from_pretrained(
             MODEL_NAME, 
             trust_remote_code=True, 
             local_files_only=True,
@@ -45,7 +45,7 @@ def load_model():
     except Exception as e_local:
         print(f"Failed loading offline tokenizer ({e_local}), trying online...")
         try:
-            tokenizer = AutoTokenizer.from_pretrained(
+            tokenizer = LlamaTokenizerFast.from_pretrained(
                 MODEL_NAME, 
                 trust_remote_code=True, 
                 local_files_only=False,
