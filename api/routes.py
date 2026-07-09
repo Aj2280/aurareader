@@ -44,10 +44,6 @@ def run_ocr_stream(file_path: str, mode: str, prompt: str) -> Iterator[str]:
     """Inference generator that streams OCR text tokens."""
     model, tokenizer = load_model()
     
-    if not getattr(model, "generate_is_patched", False):
-        patch_model_generation(model, tokenizer)
-        model.generate_is_patched = True
-
     out_dir = tempfile.mkdtemp(prefix="ocr_out_")
     base_size, image_size, crop_mode, ngram_window = (1024, 640, True, 128) if mode == "long" else (1024, 1024, False, 128)
 
@@ -64,43 +60,62 @@ def run_ocr_stream(file_path: str, mode: str, prompt: str) -> Iterator[str]:
         save_results=True,
     )
 
-    q = queue.Queue()
-    errors = []
+    is_hf_space = "SPACE_ID" in os.environ
 
-    def _infer_thread():
+    if is_hf_space:
+        # Run synchronously on the main thread inside Hugging Face Spaces
+        # to avoid threading conflicts with ZeroGPU's CUDA context management
         try:
             model.infer(tokenizer, **_infer_kwargs)
         except Exception as e:
-            errors.append(str(e))
-
-    thread = threading.Thread(target=_infer_thread, daemon=True)
-    register_thread_queue(thread, q)
-
-    accumulated = ""
-    try:
-        thread.start()
-        while thread.is_alive() or not q.empty():
-            try:
-                chunk = q.get(timeout=0.02)
-                accumulated += chunk
-                yield accumulated
-            except queue.Empty:
-                continue
-    finally:
-        unregister_thread_queue(thread)
-        thread.join()
-
-    full_text = _collect_output(out_dir)
-    clean_directory(out_dir)
-
-    if full_text:
+            raise RuntimeError(f"Inference failed: {str(e)}")
+        
+        full_text = _collect_output(out_dir)
+        clean_directory(out_dir)
         yield full_text
-    elif accumulated:
-        yield accumulated
     else:
-        if errors:
-            raise RuntimeError(f"Inference failed: {', '.join(errors)}")
-        yield ""
+        # Run in a background thread with queue-based streaming for local execution
+        if not getattr(model, "generate_is_patched", False):
+            patch_model_generation(model, tokenizer)
+            model.generate_is_patched = True
+
+        q = queue.Queue()
+        errors = []
+
+        def _infer_thread():
+            try:
+                model.infer(tokenizer, **_infer_kwargs)
+            except Exception as e:
+                errors.append(str(e))
+
+        thread = threading.Thread(target=_infer_thread, daemon=True)
+        register_thread_queue(thread, q)
+
+        accumulated = ""
+        try:
+            thread.start()
+            while thread.is_alive() or not q.empty():
+                try:
+                    chunk = q.get(timeout=0.02)
+                    accumulated += chunk
+                    yield accumulated
+                except queue.Empty:
+                    continue
+        finally:
+            unregister_thread_queue(thread)
+            thread.join()
+
+        full_text = _collect_output(out_dir)
+        clean_directory(out_dir)
+
+        if full_text:
+            yield full_text
+        elif accumulated:
+            yield accumulated
+        else:
+            if errors:
+                raise RuntimeError(f"Inference failed: {', '.join(errors)}")
+            yield ""
 
 def process_document(file, mode, preset, custom_prompt):
     """Processes uploaded file (Image or PDF) and yields streamed text."""
