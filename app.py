@@ -1,3 +1,8 @@
+try:
+    import spaces
+except ImportError:
+    pass
+
 import os
 import sys
 import subprocess

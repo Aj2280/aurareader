@@ -29,6 +29,7 @@ def _collect_output(out_dir: str) -> str:
                     pass
     return result.strip()
 
+@spaces.GPU(duration=60)
 def run_ocr_stream(file_path: str, mode: str, prompt: str) -> Iterator[str]:
     """Inference generator that streams OCR text tokens."""
     model, tokenizer = load_model()
