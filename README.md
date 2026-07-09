@@ -14,6 +14,8 @@ hardware: zero-gpu
 
 # ⚡ AuraReader Pro
 
+[![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/Abhi2280/aurareaderOCR)
+
 AuraReader Pro is a high-performance, local Vision-Language Model (VLM) document parsing and OCR dashboard. Built on top of the **baidu/Unlimited-OCR** model, it is optimized for local CPU and Apple Silicon (MPS) execution and personalized for a seamless, private document-to-text experience.
 
 ---
