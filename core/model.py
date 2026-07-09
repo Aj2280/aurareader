@@ -34,34 +34,25 @@ def load_model():
 
     print(f"Loading tokenizer ({MODEL_NAME})...")
     try:
-        # Try loading offline fast tokenizer first
+        # Try loading offline first
         tokenizer = AutoTokenizer.from_pretrained(
             MODEL_NAME, 
             trust_remote_code=True, 
-            local_files_only=True
+            local_files_only=True,
+            load_chat_template=False
         )
         print("Successfully loaded tokenizer from local cache.")
-    except Exception as e_local_fast:
-        print(f"Failed loading offline fast tokenizer ({e_local_fast}), trying offline slow tokenizer...")
+    except Exception as e_local:
+        print(f"Failed loading offline tokenizer ({e_local}), trying online...")
         try:
             tokenizer = AutoTokenizer.from_pretrained(
                 MODEL_NAME, 
                 trust_remote_code=True, 
-                local_files_only=True,
-                use_fast=False
+                local_files_only=False,
+                load_chat_template=False
             )
-            print("Successfully loaded slow tokenizer from local cache.")
-        except Exception as e_local_slow:
-            print(f"Failed loading offline tokenizer ({e_local_slow}), retrying online...")
-            try:
-                tokenizer = AutoTokenizer.from_pretrained(
-                    MODEL_NAME, 
-                    trust_remote_code=True, 
-                    local_files_only=False,
-                    use_fast=False
-                )
-            except Exception as e_online:
-                raise RuntimeError(f"Failed to load tokenizer: offline error: {e_local_slow}, online error: {e_online}")
+        except Exception as e_online:
+            raise RuntimeError(f"Failed to load tokenizer: offline error: {e_local}, online error: {e_online}")
     
     print(f"Loading model on device '{device}' with dtype '{torch_dtype}'...")
     try:
