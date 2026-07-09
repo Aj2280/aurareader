@@ -1,3 +1,17 @@
+---
+title: AuraReader Pro
+emoji: ⚡
+colorFrom: red
+colorTo: green
+sdk: gradio
+sdk_version: 6.20.0
+python_version: '3.10'
+app_file: app.py
+pinned: false
+license: mit
+hardware: zero-gpu
+---
+
 # ⚡ AuraReader Pro
 
 AuraReader Pro is a high-performance, local Vision-Language Model (VLM) document parsing and OCR dashboard. Built on top of the **baidu/Unlimited-OCR** model, it is optimized for local CPU and Apple Silicon (MPS) execution and personalized for a seamless, private document-to-text experience.
