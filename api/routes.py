@@ -214,6 +214,13 @@ footer {display: none !important;}
 }
 """
 
+# Pre-load model at startup to avoid network requests inside spaces.GPU sandbox
+print("Pre-loading model and tokenizer at startup...")
+try:
+    load_model()
+except Exception as e:
+    print(f"Error pre-loading model at startup: {e}")
+
 # Build standard Gradio blocks UI
 with gr.Blocks() as app:
     with gr.Row():
