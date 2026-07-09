@@ -31,44 +31,49 @@ def load_model():
     if model is not None:
         return model, tokenizer
 
-    # Force local loading if inside Hugging Face Space GPU sandbox to avoid network blocks
-    is_gpu_sandbox = "SPACE_ID" in os.environ and torch.cuda.is_available()
-    local_files_only = True if is_gpu_sandbox else False
-
-    print(f"Loading tokenizer ({MODEL_NAME}), local_files_only={local_files_only}...")
+    print(f"Loading tokenizer ({MODEL_NAME})...")
     try:
+        # Try loading offline first
         tokenizer = AutoTokenizer.from_pretrained(
             MODEL_NAME, 
             trust_remote_code=True, 
-            local_files_only=local_files_only
+            local_files_only=True
         )
-    except Exception as e:
-        if local_files_only:
-            print(f"Failed loading offline tokenizer, retrying online: {e}")
-            tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
-        else:
-            raise e
+        print("Successfully loaded tokenizer from local cache.")
+    except Exception as e_local:
+        print(f"Failed loading offline tokenizer ({e_local}), retrying online...")
+        try:
+            tokenizer = AutoTokenizer.from_pretrained(
+                MODEL_NAME, 
+                trust_remote_code=True, 
+                local_files_only=False
+            )
+        except Exception as e_online:
+            raise RuntimeError(f"Failed to load tokenizer: offline error: {e_local}, online error: {e_online}")
     
-    print(f"Loading model on device '{device}' with dtype '{torch_dtype}', local_files_only={local_files_only}...")
+    print(f"Loading model on device '{device}' with dtype '{torch_dtype}'...")
     try:
+        # Try loading offline first
         model = AutoModel.from_pretrained(
             MODEL_NAME,
             trust_remote_code=True,
             use_safetensors=True,
             torch_dtype=torch_dtype,
-            local_files_only=local_files_only
+            local_files_only=True
         ).eval().to(device)
-    except Exception as e:
-        if local_files_only:
-            print(f"Failed loading offline model, retrying online: {e}")
+        print("Successfully loaded model from local cache.")
+    except Exception as e_local:
+        print(f"Failed loading offline model ({e_local}), retrying online...")
+        try:
             model = AutoModel.from_pretrained(
                 MODEL_NAME,
                 trust_remote_code=True,
                 use_safetensors=True,
-                torch_dtype=torch_dtype
+                torch_dtype=torch_dtype,
+                local_files_only=False
             ).eval().to(device)
-        else:
-            raise e
+        except Exception as e_online:
+            raise RuntimeError(f"Failed to load model: offline error: {e_local}, online error: {e_online}")
     
     print("Model loaded successfully.")
     return model, tokenizer
