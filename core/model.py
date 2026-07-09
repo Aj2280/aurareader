@@ -31,16 +31,44 @@ def load_model():
     if model is not None:
         return model, tokenizer
 
-    print(f"Loading tokenizer ({MODEL_NAME})...")
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
+    # Force local loading if inside Hugging Face Space GPU sandbox to avoid network blocks
+    is_gpu_sandbox = "SPACE_ID" in os.environ and torch.cuda.is_available()
+    local_files_only = True if is_gpu_sandbox else False
+
+    print(f"Loading tokenizer ({MODEL_NAME}), local_files_only={local_files_only}...")
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(
+            MODEL_NAME, 
+            trust_remote_code=True, 
+            local_files_only=local_files_only
+        )
+    except Exception as e:
+        if local_files_only:
+            print(f"Failed loading offline tokenizer, retrying online: {e}")
+            tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
+        else:
+            raise e
     
-    print(f"Loading model on device '{device}' with dtype '{torch_dtype}'...")
-    model = AutoModel.from_pretrained(
-        MODEL_NAME,
-        trust_remote_code=True,
-        use_safetensors=True,
-        torch_dtype=torch_dtype,
-    ).eval().to(device)
+    print(f"Loading model on device '{device}' with dtype '{torch_dtype}', local_files_only={local_files_only}...")
+    try:
+        model = AutoModel.from_pretrained(
+            MODEL_NAME,
+            trust_remote_code=True,
+            use_safetensors=True,
+            torch_dtype=torch_dtype,
+            local_files_only=local_files_only
+        ).eval().to(device)
+    except Exception as e:
+        if local_files_only:
+            print(f"Failed loading offline model, retrying online: {e}")
+            model = AutoModel.from_pretrained(
+                MODEL_NAME,
+                trust_remote_code=True,
+                use_safetensors=True,
+                torch_dtype=torch_dtype
+            ).eval().to(device)
+        else:
+            raise e
     
     print("Model loaded successfully.")
     return model, tokenizer
