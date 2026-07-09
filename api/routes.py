@@ -5,6 +5,16 @@ import threading
 from typing import Iterator
 import gradio as gr
 
+try:
+    import spaces
+except ImportError:
+    class spaces:
+        @staticmethod
+        def GPU(duration=None):
+            def decorator(func):
+                return func
+            return decorator
+
 # Core imports
 from core.model import load_model, device
 from core.streaming import register_thread_queue, unregister_thread_queue, patch_model_generation
