@@ -1,0 +1,9 @@
+# Core Gradio Space Dependencies
+matplotlib>=3.7.0
+einops>=0.8.0
+addict>=2.4.0
+easydict>=1.13
+pymupdf>=1.26.0
+psutil>=5.9.0
+Pillow>=10.0.0
+requests>=2.31.0
